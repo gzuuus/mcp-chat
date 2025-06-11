@@ -9,7 +9,8 @@ Language Models using the OpenAI API.
 - 🤖 **Conversational AI**: Interactive chat with OpenAI's language models
 - 📚 **Conversation Memory**: Maintains conversation history for context
 - 🔄 **Streaming Responses**: Real-time streaming of AI responses
-- 🛠️ **Tool Calling**: AI can use tools to perform calculations, get weather, time, etc.
+- 🛠️ **Tool Calling**: AI can use tools to perform calculations, get weather,
+  time, etc.
 - 🎨 **Text User Interface**: Clean, simple terminal-based interface
 - ⚙️ **Configurable**: Support for different models and API endpoints
 - 🛠️ **Built-in Commands**: Helpful commands for managing conversations
@@ -33,18 +34,32 @@ Language Models using the OpenAI API.
 
 ## Usage
 
-### Basic Usage
+### Basic Chat (without tools)
 
-Run the application with:
-
-```bash
-deno run --allow-env --allow-net --allow-read main.ts
-```
-
-Or use the predefined task:
+Run the basic chat application:
 
 ```bash
 deno task dev
+```
+
+### Enhanced Chat (with tools)
+
+Run the chat application with tool support:
+
+```bash
+deno task dev-tools
+```
+
+### Manual Execution
+
+You can also run directly:
+
+```bash
+# Basic chat
+deno run --allow-env --allow-net --allow-read main.ts
+
+# Chat with tools
+deno run --allow-env --allow-net --allow-read main.ts --tools
 ```
 
 ### Environment Variables
@@ -63,18 +78,23 @@ While chatting, you can use these commands:
 - `/clear` - Clear the screen
 - `/history` - Show conversation history
 - `/reset` - Reset conversation (clear history)
+- `/tools` - Show detailed information about available tools (when tools are
+  enabled)
 - `/quit` or `/exit` - Exit the application
 
 ### Tool Calling
 
-The assistant comes with built-in tools that can be automatically invoked during conversations:
+The assistant comes with built-in tools that can be automatically invoked during
+conversations:
 
 #### Available Tools
 
-1. **Calculator** - Perform arithmetic operations (add, subtract, multiply, divide)
+1. **Calculator** - Perform arithmetic operations (add, subtract, multiply,
+   divide)
 2. **Weather** - Get mock weather information for major cities
 3. **Time** - Get current time in different timezones
-4. **Text Processor** - Process text (count words/chars, reverse, case conversion)
+4. **Text Processor** - Process text (count words/chars, reverse, case
+   conversion)
 
 #### Testing Tools
 
@@ -84,7 +104,8 @@ Test the tool functionality:
 deno task tools-test
 ```
 
-This will test all tools individually and demonstrate tool calling in conversations.
+This will test all tools individually and demonstrate tool calling in
+conversations.
 
 #### Using Tools in Chat
 
@@ -101,25 +122,25 @@ Simply ask the AI assistant to perform tasks that require tools:
 You can easily add custom tools by implementing the `AssistantTool` interface:
 
 ```typescript
-import type { AssistantTool } from './types.ts';
+import type { AssistantTool } from "./types.ts";
 
 const myCustomTool: AssistantTool = {
-  name: 'my_tool',
-  description: 'Description of what the tool does',
+  name: "my_tool",
+  description: "Description of what the tool does",
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
       input: {
-        type: 'string',
-        description: 'Input parameter description'
-      }
+        type: "string",
+        description: "Input parameter description",
+      },
     },
-    required: ['input']
+    required: ["input"],
   },
   execute: async (args: { input: string }) => {
     // Your tool logic here
     return { result: `Processed: ${args.input}` };
-  }
+  },
 };
 ```
 
@@ -127,9 +148,9 @@ Then add it to your assistant configuration:
 
 ```typescript
 const config: AssistantConfig = {
-  apiKey: 'your-api-key',
-  model: 'gpt-4',
-  tools: [myCustomTool, ...availableTools]
+  apiKey: "your-api-key",
+  model: "gpt-4",
+  tools: [myCustomTool, ...availableTools],
 };
 ```
 
@@ -137,13 +158,16 @@ const config: AssistantConfig = {
 
 ```
 mcp-chat/
-├── main.ts          # Main application entry point
-├── assistant.ts     # Assistant class for managing conversations
+├── main.ts          # Main application entry point (supports both basic and tools mode)
+├── assistant.ts     # Assistant class for managing conversations and tool calling
 ├── tui.ts          # Text User Interface utilities
 ├── config.ts       # Configuration loading and validation
 ├── types.ts        # TypeScript type definitions
+├── tools.ts        # Built-in tools implementation
+├── tools-test.ts   # Tool testing utilities
+├── test.ts         # Basic functionality tests
 ├── .env.example    # Example environment configuration
-├── deno.json       # Deno configuration
+├── deno.json       # Deno configuration with tasks
 └── README.md       # This file
 ```
 

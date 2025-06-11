@@ -9,6 +9,7 @@ export interface CoreMessage {
   content: string;
   tool_call_id?: string;
   name?: string;
+  tool_calls?: ToolCall[];
 }
 
 export interface UserMessage extends CoreMessage {
@@ -60,7 +61,7 @@ export interface AssistantTool {
  */
 export interface ToolCall {
   id: string;
-  type: 'function';
+  type: "function";
   function: {
     name: string;
     arguments: string;

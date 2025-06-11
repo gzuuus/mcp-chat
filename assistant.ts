@@ -1,11 +1,10 @@
 import OpenAI from "@openai/openai";
 import type {
   AssistantConfig,
-  AssistantMessage,
-  CoreMessage,
-  UserMessage,
   AssistantTool,
-  ToolResult,
+  CoreMessage,
+  ToolCall,
+  UserMessage,
 } from "./types.ts";
 
 export class Assistant {
@@ -55,31 +54,38 @@ export class Assistant {
     // Continue conversation until no more tool calls are needed
     while (true) {
       let assistantResponse = "";
-      let toolCalls: any[] = [];
-      let currentToolCall: any = null;
+      let toolCalls: ToolCall[] = [];
 
       try {
+        // Prepare messages for API call
+        const apiMessages = this.messages.map((msg) => {
+          const baseMessage: Record<string, any> = {
+            role: msg.role,
+            content: msg.content,
+          };
+
+          // Add tool-specific fields if it's a tool message
+          if (msg.role === "tool" && msg.tool_call_id && msg.name) {
+            baseMessage.tool_call_id = msg.tool_call_id;
+            baseMessage.name = msg.name;
+          }
+
+          // Add tool_calls for assistant messages
+          if (msg.role === "assistant" && msg.tool_calls) {
+            baseMessage.tool_calls = msg.tool_calls;
+          }
+
+          return baseMessage;
+        });
+
         // Create streaming completion
         const stream = await this.client.chat.completions.create({
           model: this.config.model,
-          messages: this.messages.map((msg) => {
-            const baseMessage: any = {
-              role: msg.role,
-              content: msg.content,
-            };
-            
-            // Add tool-specific fields if it's a tool message
-            if (msg.role === 'tool' && msg.tool_call_id && msg.name) {
-              baseMessage.tool_call_id = msg.tool_call_id;
-              baseMessage.name = msg.name;
-            }
-            
-            return baseMessage;
-          }),
+          messages: apiMessages as any,
           stream: true,
           ...(this.config.tools && this.config.tools.length > 0 && {
-            tools: this.config.tools.map(tool => ({
-              type: 'function' as const,
+            tools: this.config.tools.map((tool) => ({
+              type: "function" as const,
               function: {
                 name: tool.name,
                 description: tool.description,
@@ -106,13 +112,13 @@ export class Assistant {
           if (delta.tool_calls) {
             for (const toolCallDelta of delta.tool_calls) {
               const index = toolCallDelta.index!;
-              
+
               // Initialize tool call if needed
               if (!toolCalls[index]) {
                 toolCalls[index] = {
-                  id: '',
-                  type: 'function',
-                  function: { name: '', arguments: '' }
+                  id: "",
+                  type: "function",
+                  function: { name: "", arguments: "" },
                 };
               }
 
@@ -124,21 +130,19 @@ export class Assistant {
                 toolCalls[index].function.name += toolCallDelta.function.name;
               }
               if (toolCallDelta.function?.arguments) {
-                toolCalls[index].function.arguments += toolCallDelta.function.arguments;
+                toolCalls[index].function.arguments +=
+                  toolCallDelta.function.arguments;
               }
             }
           }
         }
 
         // Create assistant message with tool calls if any
-        const assistantMessage: any = {
+        const assistantMessage: CoreMessage = {
           role: "assistant",
-          content: assistantResponse || null,
+          content: assistantResponse || "",
+          ...(toolCalls.length > 0 && { tool_calls: toolCalls }),
         };
-
-        if (toolCalls.length > 0) {
-          assistantMessage.tool_calls = toolCalls;
-        }
 
         this.messages.push(assistantMessage);
 
@@ -148,7 +152,9 @@ export class Assistant {
         }
 
         // Execute tool calls
-        yield `\n🔧 Executing ${toolCalls.length} tool call${toolCalls.length > 1 ? 's' : ''}...\n`;
+        yield `\n🔧 Executing ${toolCalls.length} tool call${
+          toolCalls.length > 1 ? "s" : ""
+        }...\n`;
 
         for (const toolCall of toolCalls) {
           try {
@@ -168,11 +174,14 @@ export class Assistant {
               content: JSON.stringify(result),
             });
 
-            yield `✅ ${toolCall.function.name}: ${JSON.stringify(result).substring(0, 100)}${JSON.stringify(result).length > 100 ? '...' : ''}\n`;
-
+            yield `✅ ${toolCall.function.name}: ${
+              JSON.stringify(result).substring(0, 100)
+            }${JSON.stringify(result).length > 100 ? "..." : ""}\n`;
           } catch (error) {
-            const errorResult = `Error executing ${toolCall.function.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-            
+            const errorResult = `Error executing ${toolCall.function.name}: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`;
+
             this.messages.push({
               role: "tool",
               tool_call_id: toolCall.id,
@@ -186,6 +195,9 @@ export class Assistant {
 
         yield `\n🤖 Processing results...\n`;
 
+        // Continue the loop to make another API call with tool results
+        // Reset for next iteration
+        toolCalls = [];
       } catch (error) {
         const errorMessage = `Error: ${
           error instanceof Error ? error.message : "Unknown error occurred"
@@ -218,12 +230,5 @@ export class Assistant {
     if (systemMessage) {
       this.messages.push(systemMessage);
     }
-  }
-
-  /**
-   * Get the last message in the history, if any
-   */
-  private get lastMessage(): CoreMessage | undefined {
-    return this.messages[this.messages.length - 1];
   }
 }

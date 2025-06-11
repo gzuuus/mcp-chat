@@ -3,6 +3,8 @@
 import { Assistant } from "./assistant.ts";
 import { TUI } from "./tui.ts";
 import { loadConfig, validateConfig } from "./config.ts";
+import { availableTools } from "./tools.ts";
+import type { AssistantConfig } from "./types.ts";
 
 /**
  * Main application class
@@ -11,18 +13,39 @@ class MCPChat {
   private assistant: Assistant;
   private tui: TUI;
   private running = false;
+  private toolsEnabled: boolean;
 
-  constructor() {
+  constructor(enableTools = false) {
+    this.toolsEnabled = enableTools;
+
     this.tui = new TUI({
-      title: "MCP Chat",
-      welcomeMessage:
-        'Welcome to MCP Chat! Start chatting with the AI assistant.\nType "/help" for available commands.',
+      title: enableTools ? "MCP Chat with Tools" : "MCP Chat",
+      welcomeMessage: enableTools
+        ? "Welcome to MCP Chat with Tool Support!\n\n" +
+          "🛠️  Available Tools: Calculator, Weather, Time, Text Processor\n" +
+          'Try asking: "What\'s 25 + 17?" or "What time is it in Tokyo?"\n\n' +
+          'Type "/help" for available commands.'
+        : 'Welcome to MCP Chat! Start chatting with the AI assistant.\nType "/help" for available commands.',
     });
 
     // Load and validate configuration
     try {
-      const config = loadConfig();
-      validateConfig(config);
+      const baseConfig = loadConfig();
+      validateConfig(baseConfig);
+
+      // Add tools to configuration if enabled
+      const config: AssistantConfig = enableTools
+        ? {
+          ...baseConfig,
+          tools: availableTools,
+          system:
+            "You are a helpful AI assistant with access to various tools. " +
+            "Use the available tools when needed to help answer questions and perform tasks. " +
+            "Be clear about what tools you are using and explain the results. " +
+            "If a user asks for calculations, weather, time, or text processing, use the appropriate tools.",
+        }
+        : baseConfig;
+
       this.assistant = new Assistant(config);
     } catch (error) {
       this.tui.showError(
@@ -103,6 +126,9 @@ class MCPChat {
 
       case "/help":
         this.tui.showHelp();
+        if (this.toolsEnabled) {
+          this.showToolsHelp();
+        }
         break;
 
       case "/clear":
@@ -119,10 +145,52 @@ class MCPChat {
         this.tui.showInfo("Conversation history cleared.");
         break;
 
+      case "/tools":
+        if (this.toolsEnabled) {
+          this.showToolsInfo();
+        } else {
+          this.tui.showError(
+            "Tools are not enabled. Use 'deno task dev --tools' to enable tools.",
+          );
+        }
+        break;
+
       default:
         this.tui.showError(`Unknown command: ${command}`);
         this.tui.showInfo('Type "/help" to see available commands.');
         break;
+    }
+  }
+
+  /**
+   * Show tools help
+   */
+  private showToolsHelp(): void {
+    console.log("\n🛠️  Available Tools:");
+    console.log("━".repeat(30));
+    console.log("calculator    - Perform arithmetic operations");
+    console.log("get_weather   - Get weather information");
+    console.log("get_time      - Get current time in timezones");
+    console.log("process_text  - Process text (count, reverse, etc.)");
+    console.log("━".repeat(30));
+    console.log("\n💡 Example queries:");
+    console.log('- "What\'s 25 + 17?"');
+    console.log('- "What\'s the weather in Tokyo?"');
+    console.log('- "What time is it in London?"');
+    console.log("- \"Count words in 'Hello World'\"");
+  }
+
+  /**
+   * Show detailed tools information
+   */
+  private showToolsInfo(): void {
+    console.log("\n🔧 Tool Details:\n");
+
+    for (const tool of availableTools) {
+      console.log(`📋 ${tool.name}`);
+      console.log(`   Description: ${tool.description}`);
+      console.log(`   Parameters: ${JSON.stringify(tool.parameters, null, 2)}`);
+      console.log();
     }
   }
 }
@@ -137,7 +205,10 @@ async function main(): Promise<void> {
     Deno.exit(0);
   });
 
-  const app = new MCPChat();
+  // Check for --tools flag
+  const enableTools = Deno.args.includes("--tools");
+
+  const app = new MCPChat(enableTools);
   await app.run();
 }
 

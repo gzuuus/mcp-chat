@@ -1,7 +1,7 @@
 {
   "tasks": {
     "dev": "deno run --env-file -A --watch main.ts",
-    "dev-tools": "deno run --env-file -A --watch main-with-tools.ts",
+    "dev-tools": "deno run --env-file -A --watch main.ts --tools",
     "test": "deno run --allow-env --allow-net --allow-read test.ts",
     "tools-test": "deno run --allow-env --allow-net --allow-read tools-test.ts"
   },
