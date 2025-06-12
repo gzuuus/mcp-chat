@@ -3,14 +3,17 @@
  * Provides a thin layer between MCP servers and OpenAI API
  */
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import type {
-  ListToolsResult,
-  Tool as MCPTool,
-} from "@modelcontextprotocol/sdk/types.js";
+import { Client } from "@mcp/sdk/client/index.js";
+import { StdioClientTransport } from "@mcp/sdk/client/stdio.js";
+import { ElicitRequestSchema } from "@mcp/sdk/types.js";
 
-import type { McpJson, MCPServerConnection } from "./mcp-types.ts";
+import type {
+  McpJson,
+  MCPServerConnection,
+  ElicitationHandler,
+  ElicitHandlerRequest,
+  ElicitHandlerResponse
+} from "./mcp-types.ts";
 import type { AssistantTool } from "./types.ts";
 import { loadMCPConfig } from "./mcp-config.ts";
 
@@ -21,12 +24,20 @@ import { loadMCPConfig } from "./mcp-config.ts";
 export class MCPClientManager {
   private servers: Map<string, MCPServerConnection> = new Map();
   private initialized = false;
+  private elicitationHandler?: ElicitationHandler;
 
   /**
    * Common error logging utility
    */
   private logError(message: string, error: unknown): void {
     console.error(`${message}:`, error);
+  }
+
+  /**
+   * Set the elicitation handler for processing user input requests
+   */
+  setElicitationHandler(handler: ElicitationHandler): void {
+    this.elicitationHandler = handler;
   }
 
   /**
@@ -80,7 +91,7 @@ export class MCPClientManager {
       args: config.args,
     });
 
-    // Create client
+    // Create client with elicitation capabilities
     const client = new Client(
       {
         name: "mcp-chat-client",
@@ -89,16 +100,28 @@ export class MCPClientManager {
       {
         capabilities: {
           tools: {},
+          elicitation: {},
         },
       },
     );
+
+    // Set up elicitation handler if provided
+    if (this.elicitationHandler) {
+      const handler = this.elicitationHandler;
+      client.setRequestHandler(
+        ElicitRequestSchema,
+        async (request: ElicitHandlerRequest): Promise<ElicitHandlerResponse> => {
+          return await handler(request);
+        },
+      );
+    }
 
     try {
       // Connect to server
       await client.connect(transport);
 
       // List available tools
-      const toolsResult: ListToolsResult = await client.listTools();
+      const toolsResult = await client.listTools();
 
       // Store server connection
       const serverConnection: MCPServerConnection = {
@@ -118,7 +141,7 @@ export class MCPClientManager {
       );
     } catch (error) {
       // Clean up on failure
-      await client.close().catch((closeError) =>
+      await client.close().catch((closeError: any) =>
         this.logError("Error closing failed client connection", closeError)
       );
       throw error;

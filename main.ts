@@ -97,6 +97,23 @@ class MCPChat {
     if (this.mcpEnabled) {
       this.tui.showInfo("🔌 Initializing MCP servers...");
       try {
+        // Set up elicitation handler
+        this.assistant.setElicitationHandler(async (request) => {
+          this.tui.showElicitationRequest(request.params.message);
+          
+          const action = await this.tui.confirmElicitation();
+          
+          if (action === "accept") {
+            const content = await this.tui.getElicitationInput(
+              request.params.requestedSchema.properties,
+              request.params.requestedSchema.required
+            );
+            return { action: "accept", content };
+          } else {
+            return { action, content: undefined };
+          }
+        });
+
         await this.assistant.initializeMCP();
         const serverCount = this.assistant.getMCPServerCount();
         if (serverCount > 0) {

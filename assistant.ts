@@ -7,6 +7,7 @@ import type {
   UserMessage,
 } from "./types.ts";
 import { MCPClientManager } from "./mcp-client.ts";
+import type { ElicitHandlerRequest, ElicitHandlerResponse } from "./mcp-types.ts";
 
 export class Assistant {
   /** Message history */
@@ -23,6 +24,9 @@ export class Assistant {
 
   /** MCP client manager */
   private mcpClient?: MCPClientManager;
+
+  /** Elicitation handler callback */
+  private elicitationHandler?: (request: ElicitHandlerRequest) => Promise<ElicitHandlerResponse>;
 
   constructor(config: AssistantConfig) {
     this.config = config;
@@ -46,6 +50,16 @@ export class Assistant {
   }
 
   /**
+   * Set the elicitation handler for MCP tools
+   */
+  setElicitationHandler(handler: (request: ElicitHandlerRequest) => Promise<ElicitHandlerResponse>): void {
+    this.elicitationHandler = handler;
+    if (this.mcpClient) {
+      this.mcpClient.setElicitationHandler(handler);
+    }
+  }
+
+  /**
    * Initialize MCP client and load tools
    */
   async initializeMCP(): Promise<void> {
@@ -54,6 +68,11 @@ export class Assistant {
     }
 
     try {
+      // Set elicitation handler if available
+      if (this.elicitationHandler) {
+        this.mcpClient.setElicitationHandler(this.elicitationHandler);
+      }
+
       await this.mcpClient.initialize();
 
       // Load MCP tools and add them to the tools map
