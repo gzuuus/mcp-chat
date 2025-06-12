@@ -11,6 +11,8 @@ Language Models using the OpenAI API.
 - 🔄 **Streaming Responses**: Real-time streaming of AI responses
 - 🛠️ **Tool Calling**: AI can use tools to perform calculations, get weather,
   time, etc.
+- 🔌 **MCP Integration**: Connect to Model Context Protocol servers for extended
+  functionality
 - 🎨 **Text User Interface**: Clean, simple terminal-based interface
 - ⚙️ **Configurable**: Support for different models and API endpoints
 - 🛠️ **Built-in Commands**: Helpful commands for managing conversations
@@ -42,24 +44,12 @@ Run the basic chat application:
 deno task dev
 ```
 
-### Enhanced Chat (with tools)
+### MCP Chat (with MCP servers)
 
-Run the chat application with tool support:
-
-```bash
-deno task dev-tools
-```
-
-### Manual Execution
-
-You can also run directly:
+Run the chat application with MCP server support:
 
 ```bash
-# Basic chat
-deno run --allow-env --allow-net --allow-read main.ts
-
-# Chat with tools
-deno run --allow-env --allow-net --allow-read main.ts --tools
+deno task dev --mcp
 ```
 
 ### Environment Variables
@@ -78,161 +68,7 @@ While chatting, you can use these commands:
 - `/clear` - Clear the screen
 - `/history` - Show conversation history
 - `/reset` - Reset conversation (clear history)
-- `/tools` - Show detailed information about available tools (when tools are
-  enabled)
 - `/quit` or `/exit` - Exit the application
-
-### Tool Calling
-
-The assistant comes with built-in tools that can be automatically invoked during
-conversations:
-
-#### Available Tools
-
-1. **Calculator** - Perform arithmetic operations (add, subtract, multiply,
-   divide)
-2. **Weather** - Get mock weather information for major cities
-3. **Time** - Get current time in different timezones
-4. **Text Processor** - Process text (count words/chars, reverse, case
-   conversion)
-
-#### Testing Tools
-
-Test the tool functionality:
-
-```bash
-deno task tools-test
-```
-
-This will test all tools individually and demonstrate tool calling in
-conversations.
-
-#### Using Tools in Chat
-
-Simply ask the AI assistant to perform tasks that require tools:
-
-- "What's 25 + 17?"
-- "What's the weather like in Tokyo?"
-- "What time is it in London?"
-- "Count the words in this sentence"
-- "Calculate 144 divided by 12"
-
-#### Creating Custom Tools
-
-You can easily add custom tools by implementing the `AssistantTool` interface:
-
-```typescript
-import type { AssistantTool } from "./types.ts";
-
-const myCustomTool: AssistantTool = {
-  name: "my_tool",
-  description: "Description of what the tool does",
-  parameters: {
-    type: "object",
-    properties: {
-      input: {
-        type: "string",
-        description: "Input parameter description",
-      },
-    },
-    required: ["input"],
-  },
-  execute: async (args: { input: string }) => {
-    // Your tool logic here
-    return { result: `Processed: ${args.input}` };
-  },
-};
-```
-
-Then add it to your assistant configuration:
-
-```typescript
-const config: AssistantConfig = {
-  apiKey: "your-api-key",
-  model: "gpt-4",
-  tools: [myCustomTool, ...availableTools],
-};
-```
-
-## Project Structure
-
-```
-mcp-chat/
-├── main.ts          # Main application entry point (supports both basic and tools mode)
-├── assistant.ts     # Assistant class for managing conversations and tool calling
-├── tui.ts          # Text User Interface utilities
-├── config.ts       # Configuration loading and validation
-├── types.ts        # TypeScript type definitions
-├── tools.ts        # Built-in tools implementation
-├── tools-test.ts   # Tool testing utilities
-├── test.ts         # Basic functionality tests
-├── .env.example    # Example environment configuration
-├── deno.json       # Deno configuration with tasks
-└── README.md       # This file
-```
-
-## Architecture
-
-### Core Components
-
-1. **Assistant Class** (`assistant.ts`)
-   - Manages conversation history
-   - Handles OpenAI API communication
-   - Provides streaming response generation
-
-2. **TUI Class** (`tui.ts`)
-   - Handles terminal input/output
-   - Provides user interface elements
-   - Manages display formatting
-
-3. **Configuration** (`config.ts`)
-   - Loads environment variables
-   - Validates configuration
-   - Provides default values
-
-### Key Features
-
-- **Stateful Conversations**: Each request includes the full conversation
-  history to maintain context
-- **Streaming Responses**: Uses OpenAI's streaming API for real-time response
-  display
-- **Error Handling**: Comprehensive error handling for API failures and user
-  input
-- **Clean Architecture**: Separation of concerns with dedicated classes for
-  different responsibilities
-
-## Example Usage
-
-```typescript
-import { Assistant } from "./assistant.ts";
-import { loadConfig } from "./config.ts";
-
-// Load configuration
-const config = loadConfig();
-
-// Create assistant instance
-const assistant = new Assistant(config);
-
-// Send a message and stream the response
-for await (const chunk of assistant.message("Hello, how are you?")) {
-  console.log(chunk);
-}
-```
-
-## Compatible APIs
-
-This application works with any OpenAI-compatible API. Simply set the
-`OPENAI_BASE_URL` environment variable to point to your preferred endpoint.
-
-## Development
-
-The project uses idiomatic TypeScript and follows these principles:
-
-- **Type Safety**: Comprehensive TypeScript types for all data structures
-- **Async/Await**: Modern asynchronous programming patterns
-- **Generator Functions**: Efficient streaming using async generators
-- **Error Handling**: Proper error handling throughout the application
-- **Clean Code**: Well-structured, readable, and maintainable code
 
 ## License
 

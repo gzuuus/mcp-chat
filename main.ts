@@ -3,7 +3,6 @@
 import { Assistant } from "./assistant.ts";
 import { TUI } from "./tui.ts";
 import { loadConfig, validateConfig } from "./config.ts";
-import { availableTools } from "./tools.ts";
 import type { AssistantConfig } from "./types.ts";
 
 /**
@@ -13,52 +12,78 @@ class MCPChat {
   private assistant: Assistant;
   private tui: TUI;
   private running = false;
-  private toolsEnabled: boolean;
+  private mcpEnabled: boolean;
 
-  constructor(enableTools = false) {
-    this.toolsEnabled = enableTools;
+  constructor(enableMCP = true) {
+    this.mcpEnabled = enableMCP;
 
-    this.tui = new TUI({
-      title: enableTools ? "MCP Chat with Tools" : "MCP Chat",
-      welcomeMessage: enableTools
-        ? "Welcome to MCP Chat with Tool Support!\n\n" +
-          "🛠️  Available Tools: Calculator, Weather, Time, Text Processor\n" +
-          'Try asking: "What\'s 25 + 17?" or "What time is it in Tokyo?"\n\n' +
-          'Type "/help" for available commands.'
-        : 'Welcome to MCP Chat! Start chatting with the AI assistant.\nType "/help" for available commands.',
-    });
+    // Initialize TUI with dynamic configuration
+    this.tui = new TUI(this.createTUIConfig());
 
-    // Load and validate configuration
+    // Initialize assistant with configuration
     try {
-      const baseConfig = loadConfig();
-      validateConfig(baseConfig);
-
-      // Add tools to configuration if enabled
-      const config: AssistantConfig = enableTools
-        ? {
-          ...baseConfig,
-          tools: availableTools,
-          system:
-            "You are a helpful AI assistant with access to various tools. " +
-            "Use the available tools when needed to help answer questions and perform tasks. " +
-            "Be clear about what tools you are using and explain the results. " +
-            "If a user asks for calculations, weather, time, or text processing, use the appropriate tools.",
-        }
-        : baseConfig;
-
-      this.assistant = new Assistant(config);
+      this.assistant = new Assistant(this.createAssistantConfig());
     } catch (error) {
-      this.tui.showError(
-        `Configuration error: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-      this.tui.showInfo("Please check your environment variables:");
-      this.tui.showInfo("- OPENAI_API_KEY or OPENAI_KEY (required)");
-      this.tui.showInfo("- OPENAI_BASE_URL (optional)");
-      this.tui.showInfo("- MODEL_ID (optional, defaults to gpt-3.5-turbo)");
-      Deno.exit(1);
+      this.handleConfigurationError(error);
     }
+  }
+
+  /**
+   * Create TUI configuration based on enabled features
+   */
+  private createTUIConfig() {
+    if (this.mcpEnabled) {
+      return {
+        title: "MCP Chat with MCP Servers",
+        welcomeMessage: "Welcome to MCP Chat with MCP Server Support!\n\n" +
+          "🔌 MCP servers will be automatically connected\n" +
+          "Try asking questions that can utilize MCP tools\n\n" +
+          'Type "/help" for available commands.',
+      };
+    }
+
+    return {
+      title: "MCP Chat",
+      welcomeMessage:
+        'Welcome to MCP Chat! Start chatting with the AI assistant.\nType "/help" for available commands.',
+    };
+  }
+
+  /**
+   * Create assistant configuration based on enabled features
+   */
+  private createAssistantConfig(): AssistantConfig {
+    const baseConfig = loadConfig();
+    validateConfig(baseConfig);
+
+    const config: AssistantConfig = {
+      ...baseConfig,
+      ...(this.mcpEnabled && { mcpEnabled: true }),
+    };
+
+    if (this.mcpEnabled) {
+      config.system =
+        "You are a helpful AI assistant with access to MCP (Model Context Protocol) servers that provide various tools and resources. " +
+        "Use the available MCP tools when needed to help answer questions and perform tasks. ";
+    }
+
+    return config;
+  }
+
+  /**
+   * Handle configuration errors with consistent messaging
+   */
+  private handleConfigurationError(error: unknown): never {
+    this.tui.showError(
+      `Configuration error: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    this.tui.showInfo("Please check your environment variables:");
+    this.tui.showInfo("- OPENAI_API_KEY or OPENAI_KEY (required)");
+    this.tui.showInfo("- OPENAI_BASE_URL (optional)");
+    this.tui.showInfo("- MODEL_ID (optional, defaults to gpt-3.5-turbo)");
+    Deno.exit(1);
   }
 
   /**
@@ -67,6 +92,36 @@ class MCPChat {
   async run(): Promise<void> {
     this.running = true;
     this.tui.showBanner();
+
+    // Initialize MCP if enabled
+    if (this.mcpEnabled) {
+      this.tui.showInfo("🔌 Initializing MCP servers...");
+      try {
+        await this.assistant.initializeMCP();
+        const serverCount = this.assistant.getMCPServerCount();
+        if (serverCount > 0) {
+          this.tui.showInfo(`✅ Connected to ${serverCount} MCP server(s)`);
+          const serverInfo = this.assistant.getMCPServerInfo();
+          for (const server of serverInfo) {
+            this.tui.showInfo(
+              `   📡 ${server.name}: ${server.toolCount} tools`,
+            );
+          }
+        } else {
+          this.tui.showInfo(
+            "⚠️  No MCP servers connected (check mcp-servers.json)",
+          );
+        }
+      } catch (error) {
+        this.tui.showError(
+          `Failed to initialize MCP: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        this.tui.showInfo("Continuing without MCP support...");
+      }
+      console.log(); // Add spacing
+    }
 
     while (this.running) {
       try {
@@ -80,7 +135,7 @@ class MCPChat {
 
         // Handle commands
         if (input.startsWith("/")) {
-          await this.handleCommand(input);
+          this.handleCommand(input);
           continue;
         }
 
@@ -99,6 +154,7 @@ class MCPChat {
         if (error instanceof Deno.errors.Interrupted) {
           // Handle Ctrl+C gracefully
           this.tui.showInfo("\nGoodbye! 👋");
+          await this.cleanup();
           break;
         }
 
@@ -117,80 +173,170 @@ class MCPChat {
   private handleCommand(command: string): void {
     const cmd = command.toLowerCase().trim();
 
-    switch (cmd) {
-      case "/quit":
-      case "/exit":
-        this.tui.showInfo("Goodbye! 👋");
-        this.running = false;
-        break;
+    const commands: Record<string, () => void> = {
+      "/quit": () => this.handleExit(),
+      "/exit": () => this.handleExit(),
+      "/help": () => this.handleHelp(),
+      "/clear": () => this.handleClear(),
+      "/history": () => this.handleHistory(),
+      "/reset": () => this.handleReset(),
+      "/mcp": () =>
+        this.handleFeatureCommand(
+          "mcp",
+          this.mcpEnabled,
+          this.showMCPInfo.bind(this),
+        ),
+      "/servers": () =>
+        this.handleFeatureCommand(
+          "servers",
+          this.mcpEnabled,
+          this.showMCPServerInfo.bind(this),
+        ),
+    };
 
-      case "/help":
-        this.tui.showHelp();
-        if (this.toolsEnabled) {
-          this.showToolsHelp();
-        }
-        break;
+    const handler = commands[cmd];
+    if (handler) {
+      handler();
+    } else {
+      this.tui.showError(`Unknown command: ${command}`);
+      this.tui.showInfo('Type "/help" to see available commands.');
+    }
+  }
 
-      case "/clear":
-        this.tui.clearScreen();
-        this.tui.showBanner();
-        break;
+  private handleExit(): void {
+    this.tui.showInfo("Goodbye! 👋");
+    this.running = false;
+  }
 
-      case "/history":
-        this.tui.showHistory(this.assistant.getHistory());
-        break;
+  private handleHelp(): void {
+    this.tui.showHelp();
+    if (this.mcpEnabled) this.showMCPHelp();
+  }
 
-      case "/reset":
-        this.assistant.clearHistory();
-        this.tui.showInfo("Conversation history cleared.");
-        break;
+  private handleClear(): void {
+    this.tui.clearScreen();
+    this.tui.showBanner();
+  }
 
-      case "/tools":
-        if (this.toolsEnabled) {
-          this.showToolsInfo();
-        } else {
-          this.tui.showError(
-            "Tools are not enabled. Use 'deno task dev --tools' to enable tools.",
-          );
-        }
-        break;
+  private handleHistory(): void {
+    this.tui.showHistory(this.assistant.getHistory());
+  }
 
-      default:
-        this.tui.showError(`Unknown command: ${command}`);
-        this.tui.showInfo('Type "/help" to see available commands.');
-        break;
+  private handleReset(): void {
+    this.assistant.clearHistory();
+    this.tui.showInfo("Conversation history cleared.");
+  }
+
+  /**
+   * Handle feature-specific commands with consistent error handling
+   */
+  private handleFeatureCommand(
+    featureName: string,
+    enabled: boolean,
+    action: () => void,
+  ): void {
+    if (enabled) {
+      action();
+    } else {
+      const errorMessages: Record<string, string> = {
+        tools:
+          "Tools are not enabled. Use 'deno task dev --tools' to enable tools.",
+        mcp: "MCP is not enabled. Use 'deno task dev --mcp' to enable MCP.",
+        servers: "MCP is not enabled.",
+      };
+      this.tui.showError(
+        errorMessages[featureName] || `${featureName} is not enabled.`,
+      );
     }
   }
 
   /**
-   * Show tools help
+   * Generic helper for displaying sectioned information
    */
-  private showToolsHelp(): void {
-    console.log("\n🛠️  Available Tools:");
-    console.log("━".repeat(30));
-    console.log("calculator    - Perform arithmetic operations");
-    console.log("get_weather   - Get weather information");
-    console.log("get_time      - Get current time in timezones");
-    console.log("process_text  - Process text (count, reverse, etc.)");
-    console.log("━".repeat(30));
-    console.log("\n💡 Example queries:");
-    console.log('- "What\'s 25 + 17?"');
-    console.log('- "What\'s the weather in Tokyo?"');
-    console.log('- "What time is it in London?"');
-    console.log("- \"Count words in 'Hello World'\"");
+  private displaySection(title: string, items: string[], width = 30): void {
+    console.log(`\n${title}`);
+    console.log("━".repeat(width));
+    items.forEach((item) => console.log(item));
+    console.log("━".repeat(width));
   }
 
   /**
-   * Show detailed tools information
+   * Show MCP help
    */
-  private showToolsInfo(): void {
-    console.log("\n🔧 Tool Details:\n");
+  private showMCPHelp(): void {
+    this.displaySection("🔌 MCP Commands:", [
+      "/mcp      - Show MCP status and information",
+      "/servers  - Show detailed server information",
+    ]);
 
-    for (const tool of availableTools) {
-      console.log(`📋 ${tool.name}`);
-      console.log(`   Description: ${tool.description}`);
-      console.log(`   Parameters: ${JSON.stringify(tool.parameters, null, 2)}`);
+    console.log("\n💡 MCP tools are automatically available to the AI");
+    console.log("Ask questions that might require external data or actions!");
+  }
+
+  /**
+   * Show MCP information
+   */
+  private showMCPInfo(): void {
+    console.log("\n🔌 MCP (Model Context Protocol) Information:");
+    console.log("━".repeat(50));
+
+    if (this.assistant.isMCPEnabled()) {
+      const serverCount = this.assistant.getMCPServerCount();
+      const serverInfo = this.assistant.getMCPServerInfo();
+      const totalTools = serverInfo.reduce(
+        (sum, server) => sum + server.toolCount,
+        0,
+      );
+
+      console.log(`Status: ✅ Connected to ${serverCount} server(s)`);
+      console.log(`Total MCP Tools: ${totalTools}`);
+      console.log("\n📡 Connected Servers:");
+      serverInfo.forEach((server) => {
+        console.log(`   • ${server.name}: ${server.toolCount} tools`);
+      });
+    } else {
+      console.log("Status: ❌ Not initialized");
+    }
+
+    console.log("━".repeat(50));
+    console.log("\n💡 Available commands:");
+    console.log("- /servers  - Show detailed server information");
+    console.log("- /mcp      - Show this MCP information");
+  }
+
+  /**
+   * Show detailed MCP server information
+   */
+  private showMCPServerInfo(): void {
+    console.log("\n📡 MCP Server Details:\n");
+
+    const serverInfo = this.assistant.getMCPServerInfo();
+    if (serverInfo.length === 0) {
+      console.log("No MCP servers connected.");
+      return;
+    }
+
+    serverInfo.forEach((server) => {
+      console.log(`🖥️  Server: ${server.name}`);
+      console.log(
+        `   Status: ${server.connected ? "✅ Connected" : "❌ Disconnected"}`,
+      );
+      console.log(`   Tools: ${server.toolCount}`);
+
+      if (server.tools.length > 0) {
+        console.log("   Available Tools:");
+        server.tools.forEach((tool) => console.log(`     • ${tool}`));
+      }
       console.log();
+    });
+  }
+
+  /**
+   * Cleanup resources
+   */
+  private async cleanup(): Promise<void> {
+    if (this.mcpEnabled) {
+      await this.assistant.cleanup();
     }
   }
 }
@@ -205,10 +351,10 @@ async function main(): Promise<void> {
     Deno.exit(0);
   });
 
-  // Check for --tools flag
-  const enableTools = Deno.args.includes("--tools");
+  // Check for MCP flag (enabled by default)
+  const enableMCP = !Deno.args.includes("--no-mcp");
 
-  const app = new MCPChat(enableTools);
+  const app = new MCPChat(enableMCP);
   await app.run();
 }
 

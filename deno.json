@@ -1,11 +1,10 @@
 {
   "tasks": {
     "dev": "deno run --env-file -A --watch main.ts",
-    "dev-tools": "deno run --env-file -A --watch main.ts --tools",
-    "test": "deno run --allow-env --allow-net --allow-read test.ts",
-    "tools-test": "deno run --allow-env --allow-net --allow-read tools-test.ts"
+    "test": "deno run --allow-env --allow-net --allow-read test.ts"
   },
   "imports": {
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@^1.12.1",
     "@openai/openai": "jsr:@openai/openai@^4.102.0",
     "@std/assert": "jsr:@std/assert@1"
   }
