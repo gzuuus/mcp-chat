@@ -38,8 +38,9 @@ export interface AssistantConfig {
   model: string;
   /** System prompt to set the assistant's behavior */
   system?: string;
-  /** Available tools for the assistant */
-  tools?: AssistantTool[];
+  /** MCP configuration */
+  mcpEnabled?: boolean;
+  mcpConfigPath?: string;
 }
 
 /**

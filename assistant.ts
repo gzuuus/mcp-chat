@@ -6,6 +6,7 @@ import type {
   ToolCall,
   UserMessage,
 } from "./types.ts";
+import { MCPClientManager } from "./mcp-client.ts";
 
 export class Assistant {
   /** Message history */
@@ -19,6 +20,9 @@ export class Assistant {
 
   /** Available tools */
   private tools: Map<string, AssistantTool> = new Map();
+
+  /** MCP client manager */
+  private mcpClient?: MCPClientManager;
 
   constructor(config: AssistantConfig) {
     this.config = config;
@@ -35,12 +39,48 @@ export class Assistant {
       });
     }
 
-    // Initialize tools
-    if (config.tools) {
-      for (const tool of config.tools) {
+    // Initialize MCP client if enabled
+    if (config.mcpEnabled) {
+      this.mcpClient = new MCPClientManager();
+    }
+  }
+
+  /**
+   * Initialize MCP client and load tools
+   */
+  async initializeMCP(): Promise<void> {
+    if (!this.mcpClient) {
+      return;
+    }
+
+    try {
+      await this.mcpClient.initialize();
+
+      // Load MCP tools and add them to the tools map
+      const mcpTools = this.mcpClient.getAssistantTools();
+      for (const tool of mcpTools) {
         this.tools.set(tool.name, tool);
       }
+
+      console.log(`Loaded ${mcpTools.length} MCP tools`);
+    } catch (error) {
+      console.error("Failed to initialize MCP:", error);
+      throw error;
     }
+  }
+
+  /**
+   * Get all available tools (regular + MCP)
+   */
+  private getAllTools(): AssistantTool[] {
+    return Array.from(this.tools.values());
+  }
+
+  /**
+   * Get MCP server information
+   */
+  getMCPServerInfo() {
+    return this.mcpClient?.getServerInfo() ?? [];
   }
 
   /**
@@ -83,8 +123,8 @@ export class Assistant {
           model: this.config.model,
           messages: apiMessages as any,
           stream: true,
-          ...(this.config.tools && this.config.tools.length > 0 && {
-            tools: this.config.tools.map((tool) => ({
+          ...(this.tools.size > 0 && {
+            tools: this.getAllTools().map((tool) => ({
               type: "function" as const,
               function: {
                 name: tool.name,
@@ -230,5 +270,28 @@ export class Assistant {
     if (systemMessage) {
       this.messages.push(systemMessage);
     }
+  }
+
+  /**
+   * Cleanup resources (disconnect MCP clients)
+   */
+  async cleanup(): Promise<void> {
+    if (this.mcpClient) {
+      await this.mcpClient.shutdown();
+    }
+  }
+
+  /**
+   * Check if MCP is enabled and initialized
+   */
+  isMCPEnabled(): boolean {
+    return this.mcpClient?.isInitialized() ?? false;
+  }
+
+  /**
+   * Get the number of connected MCP servers
+   */
+  getMCPServerCount(): number {
+    return this.mcpClient?.getConnectedServerCount() ?? 0;
   }
 }
