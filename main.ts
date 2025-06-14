@@ -34,9 +34,8 @@ class MCPChat {
   private createTUIConfig() {
     if (this.mcpEnabled) {
       return {
-        title: "MCP Chat with MCP Servers",
-        welcomeMessage: "Welcome to MCP Chat with MCP Server Support!\n\n" +
-          "🔌 MCP servers will be automatically connected\n" +
+        title: "MCP Chat",
+        welcomeMessage: "Welcome to MCP Chat\n\n" +
           "Try asking questions that can utilize MCP tools\n\n" +
           'Type "/help" for available commands.',
       };
@@ -95,32 +94,35 @@ class MCPChat {
 
     // Initialize MCP if enabled
     if (this.mcpEnabled) {
-      this.tui.showInfo("🔌 Initializing MCP servers...");
       try {
+        // Set up elicitation handler
+        this.assistant.setElicitationHandler(async (request) => {
+          const result = await this.tui.getElicitationInput(
+            request.params.requestedSchema.properties,
+            request.params.requestedSchema.required,
+          );
+
+          if (result === null) {
+            return { action: "cancel", content: undefined };
+          } else {
+            return { action: "accept", content: result };
+          }
+        });
+
         await this.assistant.initializeMCP();
         const serverCount = this.assistant.getMCPServerCount();
         if (serverCount > 0) {
-          this.tui.showInfo(`✅ Connected to ${serverCount} MCP server(s)`);
-          const serverInfo = this.assistant.getMCPServerInfo();
-          for (const server of serverInfo) {
-            this.tui.showInfo(
-              `   📡 ${server.name}: ${server.toolCount} tools`,
-            );
-          }
+          this.tui.showInfo(`🔌 ${serverCount} MCP server(s) connected`);
         } else {
-          this.tui.showInfo(
-            "⚠️  No MCP servers connected (check mcp-servers.json)",
-          );
+          this.tui.showInfo("⚠️  No MCP servers found");
         }
       } catch (error) {
         this.tui.showError(
-          `Failed to initialize MCP: ${
+          `MCP initialization failed: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
-        this.tui.showInfo("Continuing without MCP support...");
       }
-      console.log(); // Add spacing
     }
 
     while (this.running) {
