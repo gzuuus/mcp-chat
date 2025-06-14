@@ -77,4 +77,6 @@ export interface ElicitHandlerResponse {
 /**
  * Elicitation Handler Function Type
  */
-export type ElicitationHandler = (request: ElicitHandlerRequest) => Promise<ElicitHandlerResponse>;
+export type ElicitationHandler = (
+  request: ElicitHandlerRequest,
+) => Promise<ElicitHandlerResponse>;

@@ -139,98 +139,82 @@ export class TUI {
 
   /**
    * Get elicitation input from user with field prompts
+   * Returns null if user cancels, otherwise returns the collected data
    */
   async getElicitationInput(
-    properties: Record<string, { type: string; title: string; [key: string]: unknown }>,
-    required: string[]
-  ): Promise<Record<string, string | number | undefined>> {
+    properties: Record<
+      string,
+      { type: string; title: string; [key: string]: unknown }
+    >,
+    required: string[],
+  ): Promise<Record<string, string | number | undefined> | null> {
     const result: Record<string, string | number | undefined> = {};
-    
-    console.log("\nPlease provide the following information:");
-    
+
+    // Show helpful instructions
+    const hasOptionalFields = Object.keys(properties).some((key) =>
+      !required.includes(key)
+    );
+    console.log("📝 Server requesting information:");
+    if (hasOptionalFields) {
+      console.log(
+        "💡 Press Enter to skip optional fields, or type '/cancel' to cancel\n",
+      );
+    } else {
+      console.log("💡 Type '/cancel' to cancel\n");
+    }
+
     for (const [fieldName, fieldDef] of Object.entries(properties)) {
       const isRequired = required.includes(fieldName);
       const fieldTitle = fieldDef.title || fieldName;
       const fieldType = fieldDef.type;
-      
+
       while (true) {
-        const prompt = `${fieldTitle}${isRequired ? ' (required)' : ' (optional)'}: `;
+        const prompt = `${fieldTitle}${isRequired ? " *" : ""}: `;
         Deno.stdout.writeSync(new TextEncoder().encode(prompt));
-        
+
         const decoder = new TextDecoder();
         const buffer = new Uint8Array(1024);
         const bytesRead = await Deno.stdin.read(buffer);
-        
+
         if (bytesRead === null) {
-          throw new Error("EOF received during elicitation");
+          return null; // EOF received, treat as cancel
         }
-        
+
         const input = decoder.decode(buffer.subarray(0, bytesRead)).trim();
-        
+
+        // Handle cancel command
+        if (input.toLowerCase() === "/cancel") {
+          console.log("❌ Cancelled");
+          return null;
+        }
+
         // Handle empty input
         if (!input) {
           if (isRequired) {
-            console.log(`❌ ${fieldTitle} is required. Please provide a value.`);
+            console.log(`❌ Required field`);
             continue;
           } else {
-            break; // Skip optional field
+            // Skip optional field - don't add to result
+            break;
           }
         }
-        
+
         // Type conversion
         if (fieldType === "number") {
           const numValue = Number(input);
           if (isNaN(numValue)) {
-            console.log(`❌ ${fieldTitle} must be a number. Please try again.`);
+            console.log(`❌ Must be a number`);
             continue;
           }
           result[fieldName] = numValue;
         } else {
           result[fieldName] = input;
         }
-        
+
         break;
       }
     }
-    
-    return result;
-  }
 
-  /**
-   * Ask user whether to accept, decline, or cancel elicitation
-   */
-  async confirmElicitation(): Promise<"accept" | "decline" | "cancel"> {
-    while (true) {
-      console.log("\nWhat would you like to do?");
-      console.log("  [a] Accept and provide the information");
-      console.log("  [d] Decline to provide information");
-      console.log("  [c] Cancel the operation");
-      
-      Deno.stdout.writeSync(new TextEncoder().encode("\nChoice (a/d/c): "));
-      
-      const decoder = new TextDecoder();
-      const buffer = new Uint8Array(1024);
-      const bytesRead = await Deno.stdin.read(buffer);
-      
-      if (bytesRead === null) {
-        return "cancel";
-      }
-      
-      const choice = decoder.decode(buffer.subarray(0, bytesRead)).trim().toLowerCase();
-      
-      switch (choice) {
-        case "a":
-        case "accept":
-          return "accept";
-        case "d":
-        case "decline":
-          return "decline";
-        case "c":
-        case "cancel":
-          return "cancel";
-        default:
-          console.log("❌ Invalid choice. Please enter 'a', 'd', or 'c'.");
-      }
-    }
+    return result;
   }
 }

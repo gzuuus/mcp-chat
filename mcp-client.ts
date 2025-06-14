@@ -8,11 +8,11 @@ import { StdioClientTransport } from "@mcp/sdk/client/stdio.js";
 import { ElicitRequestSchema } from "@mcp/sdk/types.js";
 
 import type {
-  McpJson,
-  MCPServerConnection,
   ElicitationHandler,
   ElicitHandlerRequest,
-  ElicitHandlerResponse
+  ElicitHandlerResponse,
+  McpJson,
+  MCPServerConnection,
 } from "./mcp-types.ts";
 import type { AssistantTool } from "./types.ts";
 import { loadMCPConfig } from "./mcp-config.ts";
@@ -67,7 +67,6 @@ export class MCPClientManager {
 
       await Promise.all(connectionPromises);
       this.initialized = true;
-      console.log(`MCP Client initialized with ${this.servers.size} server(s)`);
     } catch (error) {
       this.logError("Failed to initialize MCP client", error);
       throw error;
@@ -110,7 +109,9 @@ export class MCPClientManager {
       const handler = this.elicitationHandler;
       client.setRequestHandler(
         ElicitRequestSchema,
-        async (request: ElicitHandlerRequest): Promise<ElicitHandlerResponse> => {
+        async (
+          request: ElicitHandlerRequest,
+        ): Promise<ElicitHandlerResponse> => {
           return await handler(request);
         },
       );
@@ -133,12 +134,6 @@ export class MCPClientManager {
       };
 
       this.servers.set(name, serverConnection);
-
-      console.log(
-        `Connected to MCP server '${name}' with ${
-          toolsResult.tools?.length || 0
-        } tools`,
-      );
     } catch (error) {
       // Clean up on failure
       await client.close().catch((closeError: any) =>
@@ -259,8 +254,6 @@ export class MCPClientManager {
     await Promise.all(disconnectPromises);
     this.servers.clear();
     this.initialized = false;
-
-    console.log("MCP Client shutdown complete");
   }
 
   /**

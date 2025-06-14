@@ -74,7 +74,8 @@ server.tool(
       content: [
         {
           type: "text",
-          text: `User info collected successfully: Name - ${name}, Age - ${age}. This information was obtained through elicitation!`,
+          text:
+            `User info collected successfully: Name - ${name}, Age - ${age}. This information was obtained through elicitation!`,
         },
       ],
     };

@@ -7,7 +7,10 @@ import type {
   UserMessage,
 } from "./types.ts";
 import { MCPClientManager } from "./mcp-client.ts";
-import type { ElicitHandlerRequest, ElicitHandlerResponse } from "./mcp-types.ts";
+import type {
+  ElicitHandlerRequest,
+  ElicitHandlerResponse,
+} from "./mcp-types.ts";
 
 export class Assistant {
   /** Message history */
@@ -26,7 +29,9 @@ export class Assistant {
   private mcpClient?: MCPClientManager;
 
   /** Elicitation handler callback */
-  private elicitationHandler?: (request: ElicitHandlerRequest) => Promise<ElicitHandlerResponse>;
+  private elicitationHandler?: (
+    request: ElicitHandlerRequest,
+  ) => Promise<ElicitHandlerResponse>;
 
   constructor(config: AssistantConfig) {
     this.config = config;
@@ -52,7 +57,9 @@ export class Assistant {
   /**
    * Set the elicitation handler for MCP tools
    */
-  setElicitationHandler(handler: (request: ElicitHandlerRequest) => Promise<ElicitHandlerResponse>): void {
+  setElicitationHandler(
+    handler: (request: ElicitHandlerRequest) => Promise<ElicitHandlerResponse>,
+  ): void {
     this.elicitationHandler = handler;
     if (this.mcpClient) {
       this.mcpClient.setElicitationHandler(handler);
@@ -80,8 +87,6 @@ export class Assistant {
       for (const tool of mcpTools) {
         this.tools.set(tool.name, tool);
       }
-
-      console.log(`Loaded ${mcpTools.length} MCP tools`);
     } catch (error) {
       console.error("Failed to initialize MCP:", error);
       throw error;
@@ -233,9 +238,20 @@ export class Assistant {
               content: JSON.stringify(result),
             });
 
-            yield `✅ ${toolCall.function.name}: ${
-              JSON.stringify(result).substring(0, 100)
-            }${JSON.stringify(result).length > 100 ? "..." : ""}\n`;
+            // Format result for display
+            let displayResult: string;
+            if (typeof result === "object" && result !== null) {
+              // For objects, show a clean summary
+              if ("success" in result && "content" in result) {
+                displayResult = result.success ? "✅ Success" : "❌ Failed";
+              } else {
+                displayResult = "completed";
+              }
+            } else {
+              displayResult = String(result);
+            }
+
+            yield `✅ ${toolCall.function.name}: ${displayResult}\n`;
           } catch (error) {
             const errorResult = `Error executing ${toolCall.function.name}: ${
               error instanceof Error ? error.message : "Unknown error"

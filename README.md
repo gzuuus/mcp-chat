@@ -2,18 +2,19 @@
 
 A simple AI LLM chat TUI (Text User Interface) built with Deno and TypeScript.
 This application provides a conversational interface to interact with Large
-Language Models using the OpenAI API.
+Language Models using the OpenAI API, with support for Model Context Protocol
+(MCP) servers.
 
 ## Features
 
 - 🤖 **Conversational AI**: Interactive chat with OpenAI's language models
 - 📚 **Conversation Memory**: Maintains conversation history for context
 - 🔄 **Streaming Responses**: Real-time streaming of AI responses
-- 🛠️ **Tool Calling**: AI can use tools to perform calculations, get weather,
-  time, etc.
 - 🔌 **MCP Integration**: Connect to Model Context Protocol servers for extended
   functionality
-- 🎨 **Text User Interface**: Clean, simple terminal-based interface
+- 📝 **Interactive Elicitation**: Tools can request additional information from
+  users dynamically
+- 🎨 **Clean TUI**: Simple, focused terminal-based interface
 - ⚙️ **Configurable**: Support for different models and API endpoints
 - 🛠️ **Built-in Commands**: Helpful commands for managing conversations
 
@@ -36,21 +37,42 @@ Language Models using the OpenAI API.
 
 ## Usage
 
-### Basic Chat (without tools)
+### Running the Application
 
-Run the basic chat application:
+By default, MCP support is enabled:
 
 ```bash
 deno task dev
 ```
 
-### MCP Chat (with MCP servers)
-
-Run the chat application with MCP server support:
+To run without MCP support:
 
 ```bash
-deno task dev --mcp
+deno task dev --no-mcp
 ```
+
+### MCP Server Configuration
+
+Configure MCP servers in `mcp-servers.json` (see `mcp-servers.example.json` for
+reference).
+
+### Interactive Elicitation
+
+When MCP tools need additional information, they can request it interactively:
+
+```
+📝 Server requesting information:
+💡 Type '/cancel' to cancel
+
+Name *:
+```
+
+- Required fields are marked with `*`
+- Press Enter to skip optional fields
+- Type `/cancel` to cancel the request
+
+For detailed information about the elicitation feature, see
+[ELICITATION_GUIDE.md](ELICITATION_GUIDE.md).
 
 ### Environment Variables
 
@@ -64,11 +86,18 @@ deno task dev --mcp
 
 While chatting, you can use these commands:
 
+**Basic Commands:**
+
 - `/help` - Show available commands
 - `/clear` - Clear the screen
 - `/history` - Show conversation history
 - `/reset` - Reset conversation (clear history)
 - `/quit` or `/exit` - Exit the application
+
+**MCP Commands** (when MCP is enabled):
+
+- `/mcp` - Show MCP status and information
+- `/servers` - Show detailed server information
 
 ## License
 
