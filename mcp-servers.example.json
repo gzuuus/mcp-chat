@@ -1,14 +1,9 @@
 {
   "servers": {
-    "filesystem": {
+    "felicitation-test": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
-    },
-    "git": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-git", "--repository", "."]
+      "command": "deno",
+      "args": ["run", "--unstable-node-globals", "-A", "test-elicitation-server.ts"]
     }
   }
 }
