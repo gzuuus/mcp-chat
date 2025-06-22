@@ -5,7 +5,10 @@ This application provides a conversational interface to interact with Large
 Language Models using the OpenAI API, with support for Model Context Protocol
 (MCP) servers.
 
-> **Note**: This project is in early stages of development. Some models might produce different tool call objects which might be unhandled. So far it's working well with any GPT model. We've tested without issues with GPT-4.1 family (normal, nano, micro).
+> **Note**: This project is in early stages of development. Some models might
+> produce different tool call objects which might be unhandled. So far it's
+> working well with any GPT model. We've tested without issues with GPT-4.1
+> family (normal, nano, micro).
 
 ## Features
 

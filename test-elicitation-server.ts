@@ -1,5 +1,5 @@
-import { McpServer } from "@mcp/sdk/server/mcp.js";
-import { StdioServerTransport } from "@mcp/sdk/server/stdio.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
 // Create an MCP server with elicitation capabilities

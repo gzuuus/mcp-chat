@@ -3,7 +3,12 @@
     "felicitation-test": {
       "type": "stdio",
       "command": "deno",
-      "args": ["run", "--unstable-node-globals", "-A", "test-elicitation-server.ts"]
+      "args": [
+        "run",
+        "--unstable-node-globals",
+        "-A",
+        "test-elicitation-server.ts"
+      ]
     }
   }
 }

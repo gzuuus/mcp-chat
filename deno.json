@@ -4,7 +4,7 @@
     "test": "deno run --allow-env --allow-net --allow-read --unstable-node-globals test.ts"
   },
   "imports": {
-    "@mcp/sdk/": "/path/to/typescript-sdk/dist/esm/",
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk",
     "@openai/openai": "jsr:@openai/openai@^4.102.0",
     "@std/assert": "jsr:@std/assert@1",
     "ajv": "npm:ajv@^8.16.0",

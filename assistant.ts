@@ -8,9 +8,9 @@ import type {
 } from "./types.ts";
 import { MCPClientManager } from "./mcp-client.ts";
 import type {
-  ElicitHandlerRequest,
-  ElicitHandlerResponse,
-} from "./mcp-types.ts";
+  ElicitRequest,
+  ElicitResult,
+} from "@modelcontextprotocol/sdk/types";
 
 export class Assistant {
   /** Message history */
@@ -30,8 +30,8 @@ export class Assistant {
 
   /** Elicitation handler callback */
   private elicitationHandler?: (
-    request: ElicitHandlerRequest,
-  ) => Promise<ElicitHandlerResponse>;
+    request: ElicitRequest,
+  ) => Promise<ElicitResult>;
 
   constructor(config: AssistantConfig) {
     this.config = config;
@@ -58,7 +58,7 @@ export class Assistant {
    * Set the elicitation handler for MCP tools
    */
   setElicitationHandler(
-    handler: (request: ElicitHandlerRequest) => Promise<ElicitHandlerResponse>,
+    handler: (request: ElicitRequest) => Promise<ElicitResult>,
   ): void {
     this.elicitationHandler = handler;
     if (this.mcpClient) {
@@ -123,7 +123,7 @@ export class Assistant {
       try {
         // Prepare messages for API call
         const apiMessages = this.messages.map((msg) => {
-          const baseMessage: Record<string, any> = {
+          const baseMessage: Record<string, unknown> = {
             role: msg.role,
             content: msg.content,
           };
@@ -227,7 +227,19 @@ export class Assistant {
               throw new Error(`Tool '${toolCall.function.name}' not found`);
             }
 
-            const args = JSON.parse(toolCall.function.arguments);
+            let args: Record<string, unknown>;
+            if (!toolCall.function.arguments) {
+              args = {};
+            } else {
+              try {
+                args = JSON.parse(toolCall.function.arguments);
+              } catch (e) {
+                console.error(
+                  `Error parsing JSON for tool ${toolCall.function.name}. Arguments: '${toolCall.function.arguments}' Error: ${e}`,
+                );
+                args = {};
+              }
+            }
             const result = await tool.execute(args);
 
             // Add tool result to messages

@@ -103,9 +103,9 @@ class MCPChat {
           );
 
           if (result === null) {
-            return { action: "cancel", content: undefined };
+            return { action: "cancel", content: undefined, roots: [] };
           } else {
-            return { action: "accept", content: result };
+            return { action: "accept", content: result, roots: [] };
           }
         });
 
@@ -319,14 +319,14 @@ class MCPChat {
     }
 
     serverInfo.forEach((server) => {
-      console.log(`🖥️  Server: ${server.name}`);
+      console.log(`🖥️ Server: ${server.name}`);
       console.log(
-        `   Status: ${server.connected ? "✅ Connected" : "❌ Disconnected"}`,
+        `Status: ${server.connected ? "✅ Connected" : "❌ Disconnected"}`,
       );
-      console.log(`   Tools: ${server.toolCount}`);
+      console.log(`Tools: ${server.toolCount}`);
 
       if (server.tools.length > 0) {
-        console.log("   Available Tools:");
+        console.log("Available Tools:");
         server.tools.forEach((tool) => console.log(`     • ${tool}`));
       }
       console.log();

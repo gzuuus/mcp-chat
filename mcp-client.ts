@@ -3,14 +3,18 @@
  * Provides a thin layer between MCP servers and OpenAI API
  */
 
-import { Client } from "@mcp/sdk/client/index.js";
-import { StdioClientTransport } from "@mcp/sdk/client/stdio.js";
-import { ElicitRequestSchema } from "@mcp/sdk/types.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  CallToolRequest,
+  ElicitRequest,
+  ElicitResult,
+} from "@modelcontextprotocol/sdk/types";
 
 import type {
+  ClientResult,
   ElicitationHandler,
-  ElicitHandlerRequest,
-  ElicitHandlerResponse,
   McpJson,
   MCPServerConnection,
 } from "./mcp-types.ts";
@@ -109,10 +113,8 @@ export class MCPClientManager {
       const handler = this.elicitationHandler;
       client.setRequestHandler(
         ElicitRequestSchema,
-        async (
-          request: ElicitHandlerRequest,
-        ): Promise<ElicitHandlerResponse> => {
-          return await handler(request);
+        async (request): Promise<ElicitResult> => {
+          return await handler(request as ElicitRequest);
         },
       );
     }
@@ -136,7 +138,7 @@ export class MCPClientManager {
       this.servers.set(name, serverConnection);
     } catch (error) {
       // Clean up on failure
-      await client.close().catch((closeError: any) =>
+      await client.close().catch((closeError) =>
         this.logError("Error closing failed client connection", closeError)
       );
       throw error;
@@ -158,7 +160,7 @@ export class MCPClientManager {
         description: mcpTool.description ||
           `Tool from MCP server: ${serverName}`,
         parameters: mcpTool.inputSchema || { type: "object", properties: {} },
-        execute: async (args: any) =>
+        execute: (args: CallToolRequest["params"]["arguments"]) =>
           this.executeMCPTool(serverName, mcpTool.name, args),
       }));
 
@@ -174,8 +176,8 @@ export class MCPClientManager {
   private async executeMCPTool(
     serverName: string,
     toolName: string,
-    args: any,
-  ): Promise<any> {
+    args: CallToolRequest["params"]["arguments"],
+  ): Promise<unknown> {
     const connection = this.servers.get(serverName);
     if (!connection || !connection.connected) {
       throw new Error(`MCP server '${serverName}' is not connected`);
@@ -208,14 +210,16 @@ export class MCPClientManager {
   /**
    * Extract text content from MCP result
    */
-  private extractTextContent(result: any): string {
+  private extractTextContent(result: ClientResult): string {
     if (!result.content || !Array.isArray(result.content)) {
       return "";
     }
 
     return result.content
-      .filter((content: any) => content.type === "text")
-      .map((content: any) => content.text)
+      .filter((content: { type: string; text?: string }) =>
+        content.type === "text"
+      )
+      .map((content: { type: string; text?: string }) => content.text)
       .join("\n");
   }
 

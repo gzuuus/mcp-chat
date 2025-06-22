@@ -144,15 +144,16 @@ export class TUI {
   async getElicitationInput(
     properties: Record<
       string,
-      { type: string; title: string; [key: string]: unknown }
+      { type: string; title?: string; [key: string]: unknown }
     >,
-    required: string[],
+    required?: string[],
   ): Promise<Record<string, string | number | undefined> | null> {
     const result: Record<string, string | number | undefined> = {};
+    const actualRequired = required || [];
 
     // Show helpful instructions
     const hasOptionalFields = Object.keys(properties).some((key) =>
-      !required.includes(key)
+      !actualRequired.includes(key)
     );
     console.log("📝 Server requesting information:");
     if (hasOptionalFields) {
@@ -164,7 +165,7 @@ export class TUI {
     }
 
     for (const [fieldName, fieldDef] of Object.entries(properties)) {
-      const isRequired = required.includes(fieldName);
+      const isRequired = actualRequired.includes(fieldName);
       const fieldTitle = fieldDef.title || fieldName;
       const fieldType = fieldDef.type;
 
