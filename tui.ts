@@ -1,7 +1,10 @@
 import type { CoreMessage, TUIOptions } from "./types.ts";
+import * as readline from "node:readline";
+import { stdin, stdout } from "node:process";
 
 export class TUI {
   private options: TUIOptions;
+  private rl: readline.Interface;
 
   constructor(options: TUIOptions = {}) {
     this.options = {
@@ -10,6 +13,11 @@ export class TUI {
         'Welcome to MCP Chat! Type your message and press Enter. Type "/quit" to exit.',
       ...options,
     };
+
+    this.rl = readline.createInterface({
+      input: stdin,
+      output: stdout,
+    });
   }
 
   /**
@@ -73,21 +81,13 @@ export class TUI {
   /**
    * Get user input
    */
-  async getUserInput(): Promise<string> {
-    const decoder = new TextDecoder();
-    const buffer = new Uint8Array(1024);
-
-    // Show prompt
-    Deno.stdout.writeSync(new TextEncoder().encode("\n> "));
-
-    // Read input
-    const bytesRead = await Deno.stdin.read(buffer);
-    if (bytesRead === null) {
-      return "/quit"; // EOF received
-    }
-
-    const input = decoder.decode(buffer.subarray(0, bytesRead)).trim();
-    return input;
+  getUserInput(): Promise<string> {
+    const promptText = "\n> ";
+    return new Promise((resolve) => {
+      this.rl.question(promptText, (answer) => {
+        resolve(answer.trim());
+      });
+    });
   }
 
   /**
@@ -170,18 +170,12 @@ export class TUI {
       const fieldType = fieldDef.type;
 
       while (true) {
-        const prompt = `${fieldTitle}${isRequired ? " *" : ""}: `;
-        Deno.stdout.writeSync(new TextEncoder().encode(prompt));
-
-        const decoder = new TextDecoder();
-        const buffer = new Uint8Array(1024);
-        const bytesRead = await Deno.stdin.read(buffer);
-
-        if (bytesRead === null) {
-          return null; // EOF received, treat as cancel
-        }
-
-        const input = decoder.decode(buffer.subarray(0, bytesRead)).trim();
+        const promptText = `${fieldTitle}${isRequired ? " *" : ""}: `;
+        const input = (await new Promise<string>((resolve) => {
+          this.rl.question(promptText, (answer) => {
+            resolve(answer);
+          });
+        })).trim();
 
         // Handle cancel command
         if (input.toLowerCase() === "/cancel") {

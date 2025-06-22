@@ -52,9 +52,9 @@ export interface AssistantTool {
   /** Tool description */
   description: string;
   /** Tool parameters schema */
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   /** Tool execution function */
-  execute: (args: any) => Promise<any> | any;
+  execute: (args: unknown) => Promise<unknown> | unknown;
 }
 
 /**

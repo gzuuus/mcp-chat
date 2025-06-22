@@ -1,21 +1,21 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@openai/openai@^4.102.0": "4.102.0",
+    "jsr:@openai/openai@^5.6.0": "5.6.0",
     "jsr:@std/assert@1": "1.0.13",
     "jsr:@std/internal@^1.0.6": "1.0.8",
-    "npm:@modelcontextprotocol/sdk@*": "1.13.0_express@5.1.0_zod@3.25.63",
+    "npm:@modelcontextprotocol/sdk@*": "1.13.0_express@5.1.0_zod@3.25.67",
     "npm:@types/node@*": "22.15.15",
     "npm:ajv-formats@^3.0.1": "3.0.1_ajv@8.17.1",
     "npm:ajv@^8.16.0": "8.17.1",
     "npm:cross-spawn@^7.0.3": "7.0.6",
     "npm:zod-to-json-schema@^3.24.5": "3.24.5_zod@3.25.57",
     "npm:zod@3": "3.25.57",
-    "npm:zod@^3.25.63": "3.25.63"
+    "npm:zod@^3.25.67": "3.25.67"
   },
   "jsr": {
-    "@openai/openai@4.102.0": {
-      "integrity": "ea5201bc5c8a696d3a5139a9cd2252e3ab9b2b880769a9cd7f05602ea1a02acf",
+    "@openai/openai@5.6.0": {
+      "integrity": "21d52d12f0b5379deb3daf15422f55ede57e54747b8de239216108a07afd1f19",
       "dependencies": [
         "npm:zod@3"
       ]
@@ -31,7 +31,7 @@
     }
   },
   "npm": {
-    "@modelcontextprotocol/sdk@1.13.0_express@5.1.0_zod@3.25.63": {
+    "@modelcontextprotocol/sdk@1.13.0_express@5.1.0_zod@3.25.67": {
       "integrity": "sha512-P5FZsXU0kY881F6Hbk9GhsYx02/KgWK1DYf7/tyE/1lcFKhDYPQR9iYjhQXJn+Sg6hQleMo3DB7h7+p4wgp2Lw==",
       "dependencies": [
         "ajv@6.12.6",
@@ -43,8 +43,8 @@
         "express-rate-limit",
         "pkce-challenge",
         "raw-body",
-        "zod@3.25.63",
-        "zod-to-json-schema@3.24.5_zod@3.25.63"
+        "zod@3.25.67",
+        "zod-to-json-schema@3.24.5_zod@3.25.67"
       ]
     },
     "@types/node@22.15.15": {
@@ -555,29 +555,29 @@
         "zod@3.25.57"
       ]
     },
-    "zod-to-json-schema@3.24.5_zod@3.25.63": {
+    "zod-to-json-schema@3.24.5_zod@3.25.67": {
       "integrity": "sha512-/AuWwMP+YqiPbsJx5D6TfgRTc4kTLjsh5SOcd4bLsfUg2RcEXrFMJl1DGgdHy2aCfsIA/cr/1JM0xcB2GZji8g==",
       "dependencies": [
-        "zod@3.25.63"
+        "zod@3.25.67"
       ]
     },
     "zod@3.25.57": {
       "integrity": "sha512-6tgzLuwVST5oLUxXTmBqoinKMd3JeesgbgseXeFasKKj8Q1FCZrHnbqJOyiEvr4cVAlbug+CgIsmJ8cl/pU5FA=="
     },
-    "zod@3.25.63": {
-      "integrity": "sha512-3ttCkqhtpncYXfP0f6dsyabbYV/nEUW+Xlu89jiXbTBifUfjaSqXOG6JnQPLtqt87n7KAmnMqcjay6c0Wq0Vbw=="
+    "zod@3.25.67": {
+      "integrity": "sha512-idA2YXwpCdqUSKRCACDE6ItZD9TZzy3OZMtpfLoh6oPR47lipysRrJfjzMqFxQ3uJuUPyUeWe1r9vLH33xO/Qw=="
     }
   },
   "workspace": {
     "dependencies": [
-      "jsr:@openai/openai@^4.102.0",
+      "jsr:@openai/openai@^5.6.0",
       "jsr:@std/assert@1",
       "npm:@modelcontextprotocol/sdk@*",
       "npm:ajv-formats@^3.0.1",
       "npm:ajv@^8.16.0",
       "npm:cross-spawn@^7.0.3",
       "npm:zod-to-json-schema@^3.24.5",
-      "npm:zod@^3.25.63"
+      "npm:zod@^3.25.67"
     ]
   }
 }
